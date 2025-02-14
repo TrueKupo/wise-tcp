@@ -19,7 +19,7 @@ lightweight, and Dockerized, designed to demonstrate secure TCP communication wi
 2. **Run the client**:
 
 ``` 
-   docker build -f docker/client.Dockerfile -t wise-client .
+   docker build -f docker/client.Dockerfile -t wise-tcp-client .
    docker run -e SERVER_ADDR=host.docker.internal:9001 -e TRY_REPLAY=false wise-tcp-client
 ```
 
