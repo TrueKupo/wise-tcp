@@ -13,7 +13,7 @@ lightweight, and Dockerized, designed to demonstrate secure TCP communication wi
 
 ```
    docker build -f docker/server.Dockerfile -t wise-tcp-server .
-   docker run -p 9001:9001 -e PORT=9001 -e MAX_CONN=2 -e POW_DIFFICULTY=20 wise-server
+   docker run -p 9001:9001 -e PORT=9001 -e MAX_CONN=2 -e POW_DIFFICULTY=20 wise-tcp-server
 ```
 
 2. **Run the client**:
