@@ -1,0 +1,60 @@
+# Use with version: v1.64.2 (build with go1.23.1)
+
+# Set high concurrency for faster execution
+run:
+  timeout: 5m  # Increase timeout for large projects
+  allow-parallel-runners: true
+
+# Define the linters we want to use
+linters:
+  enable:
+    - errcheck       # Check for unhandled errors
+    - govet          # Catch suspicious constructs
+    - ineffassign    # Detect unused assignments
+    - staticcheck    # Advanced static analysis
+    - typecheck      # Detect type errors
+    - unused         # Find unused code
+    - unused         # Find unused variables and functions
+    - gosimple       # Simplify code
+    - goconst        # Detect repeated string constants
+    - gofmt          # Enforce Go formatting
+    - gosec          # Security checks (e.g., SQL injection)
+    - misspell       # Catch typos
+    - whitespace     # Detect trailing whitespace
+    - lll            # Enforce max line length
+    - revive         # More advanced version of `golint`
+    - godot          # Ensure comments end with a period
+    - prealloc       # Optimize memory preallocation
+    - unparam        # Detect unused function parameters
+    - copyloopvar    # Detect capturing loop variables by reference
+
+  disable:
+    - err113         # Enforces error wrapping, which can be noisy
+    - stylecheck     # Too pedantic
+
+# Set rules for line length (exceptions for long strings)
+linters-settings:
+  lll:
+    line-length: 100
+
+# Exclude generated and vendor files
+issues:
+  exclude-files:
+    - ".*_test\\.go"  # Ignore test files for some linters
+    - ".*\\.pb\\.go"   # Ignore Protobuf generated files
+    - ".*\\.pb\\.gw\\.go"
+    - ".*\\.swagger\\.go"
+    - ".*\\.gen\\.go"
+  exclude-dirs:
+    - "vendor"
+    - "third_party"
+    - "mocks"
+    - "examples"
+
+# Set exit codes
+output:
+  formats:
+    - format: colored-line-number
+      path: stdout
+  print-issued-lines: true
+  print-linter-name: true

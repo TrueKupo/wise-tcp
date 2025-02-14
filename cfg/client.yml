@@ -1,0 +1,7 @@
+logger:
+  name: wise-client
+  prod: true
+
+client:
+  serverAddr: "localhost:9001"
+  tryReplay: false

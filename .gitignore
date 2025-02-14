@@ -1,0 +1,40 @@
+# Binaries for programs and plugins
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Temporary files
+*.log
+*.tmp
+*.swp
+
+# Dependency directories
+vendor/
+
+# Build directories
+bin/
+build/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+
+# Testing data
+*.coverprofile
+*coverage.out
+
+# Modules cache
+go.sum
+go.work
+go.work.sum
+
+# Specific to Go-generated binaries
+_main

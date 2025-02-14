@@ -1,0 +1,11 @@
+logger:
+  name: wise-server
+  prod: false
+
+server:
+  port: 9001
+  timeout: 15s
+  maxConn: 2
+
+guard:
+  powDifficulty: 20
