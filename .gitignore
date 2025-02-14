@@ -32,7 +32,6 @@ Thumbs.db
 *coverage.out
 
 # Modules cache
-go.sum
 go.work
 go.work.sum
 
