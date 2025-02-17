@@ -36,16 +36,25 @@ func NewResponse(solution string, opts ...ResponseOption) *Response {
 	return r
 }
 
-func ParseChallenge(challenge string, solution string, opts ...ResponseOption) (*Response, error) {
-	parsedChallenge := &Challenge{}
-	if err := parsedChallenge.FromString(challenge); err != nil {
-		return nil, fmt.Errorf("failed to parse challenge: %v", err)
+func ResponseFromChallenge(challenge string, solution string, opts ...ResponseOption) (*Response, error) {
+	parsed, err := ParseChallenge(challenge)
+	if err != nil {
+		return nil, err
 	}
 
-	opts = append(opts, WithPayload(parsedChallenge.Payload))
+	opts = append(opts, WithPayload(parsed.Payload))
 	response := NewResponse(solution, opts...)
 
 	return response, nil
+}
+
+func ParseChallenge(challenge string) (*Challenge, error) {
+	result := &Challenge{}
+	if err := result.FromString(challenge); err != nil {
+		return nil, fmt.Errorf("failed to parse challenge: %v", err)
+	}
+
+	return result, nil
 }
 
 func (r *Response) FromString(str string) error {

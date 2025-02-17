@@ -73,7 +73,7 @@ func TestChallengeVerification(t *testing.T) {
 		t.Fatalf("Failed to generate challenge: %v", err)
 	}
 
-	response, err := hashcash.ParseChallenge(
+	response, err := hashcash.ResponseFromChallenge(
 		challenge,
 		"test_solution",
 		hashcash.WithVerifier(func(hash []byte, bits, n int) (bool, error) {
@@ -121,7 +121,7 @@ func TestReplayProtection(t *testing.T) {
 		}),
 	)
 
-	response, err := hashcash.ParseChallenge(
+	response, err := hashcash.ResponseFromChallenge(
 		challenge,
 		"test_solution",
 		hashcash.WithVerifier(func(hash []byte, bits, n int) (bool, error) {

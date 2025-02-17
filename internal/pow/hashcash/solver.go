@@ -29,6 +29,18 @@ func (s *Solver) Solve(challenge string) (string, error) {
 	return r.String(), nil
 }
 
+func (s *Solver) GetSolution(challenge string) (string, error) {
+	ch := &Challenge{}
+	if err := ch.FromString(challenge); err != nil {
+		return "", err
+	}
+	solution := s.solve(ch)
+	if "" == solution {
+		return "", fmt.Errorf("solution not found")
+	}
+	return solution, nil
+}
+
 func (s *Solver) solve(ch *Challenge) string {
 	chStr := ch.String()
 	bits := ch.Difficulty

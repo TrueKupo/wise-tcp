@@ -75,6 +75,60 @@ func TestProvider_Verify(t *testing.T) {
 	}
 }
 
+func TestProvider_Verify_FakeSolution(t *testing.T) {
+	factory := fc.New(fc.WithLogger(log.Default()))
+	provider := hashcash.NewProvider(factory)
+
+	subject := "test_subject"
+	difficulty := 20
+
+	validChallenge, err := provider.Challenge(subject, difficulty)
+	if err != nil {
+		t.Fatalf("Failed to create challenge: %v", err)
+	}
+
+	fakeChallenge := &hashcash.Challenge{
+		Payload: hashcash.Payload{
+			Version:    1,
+			Difficulty: difficulty,
+			ExpiresAt:  time.Now().Add(1 * time.Minute),
+			Subject:    subject,
+			Nonce:      "fake_nonce",
+			Alg:        "sha256",
+		},
+	}
+
+	solver := hashcash.NewSolver()
+
+	fakeSolution, err := solver.GetSolution(fakeChallenge.String())
+	if err != nil {
+		t.Fatalf("Failed to solve fake challenge: %v", err)
+	}
+
+	validSolution, err := solver.GetSolution(validChallenge)
+	if err != nil {
+		t.Fatalf("Failed to solve valid challenge: %v", err)
+	}
+
+	r, err := hashcash.ResponseFromChallenge(validChallenge, fakeSolution)
+	if err != nil {
+		t.Fatalf("Failed to construct response: %v", err)
+	}
+	err = r.Verify()
+	if err == nil {
+		t.Errorf("Expected error for invalid solution, but got no error")
+	}
+
+	r, err = hashcash.ResponseFromChallenge(validChallenge, validSolution)
+	if err != nil {
+		t.Fatalf("Failed to construct response: %v", err)
+	}
+	err = r.Verify()
+	if err != nil {
+		t.Errorf("Expected success for valid solution, but got error: %v", err)
+	}
+}
+
 func TestSolver_Solve(t *testing.T) {
 	subject := "test_subject"
 	difficulty := 20
