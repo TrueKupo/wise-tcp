@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"wise-tcp/internal/pow/hashcash"
+	"wise-tcp/internal/pow/providers/hashcash"
 )
 
 func TestChallengeFromString(t *testing.T) {

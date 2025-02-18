@@ -12,6 +12,8 @@ type Response struct {
 	verifier VerifyFunc
 }
 
+var ErrInvalidSolution = fmt.Errorf("invalid solution")
+
 type ResponseOption func(*Response)
 
 func WithVerifier(v VerifyFunc) ResponseOption {
@@ -98,7 +100,7 @@ func (r *Response) Verify() error {
 		return fmt.Errorf("verification failed: %v", err)
 	}
 	if !valid {
-		return fmt.Errorf("invalid solution")
+		return ErrInvalidSolution
 	}
 	return nil
 }

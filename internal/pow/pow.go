@@ -8,3 +8,13 @@ type Provider interface {
 type Solver interface {
 	Solve(challenge string) (string, error)
 }
+
+type ProviderFactory interface {
+	GetProvider(name string) (Provider, error)
+}
+
+type ProviderBuilder func() (Provider, error)
+
+type Config struct {
+	Difficulty int `mapstructure:"diff" envconfig:"POW_DIFFICULTY"`
+}

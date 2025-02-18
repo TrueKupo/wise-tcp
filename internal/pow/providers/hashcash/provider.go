@@ -3,9 +3,11 @@ package hashcash
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"time"
 
+	"wise-tcp/pkg/core/build"
 	"wise-tcp/pkg/log"
 )
 
@@ -21,6 +23,16 @@ type ProviderOption func(*Provider)
 const defaultDifficulty = 20
 const defaultExpiry = 1 * time.Minute
 const defaultAlg = "sha256"
+
+func Builder(difficulty int) build.Builder {
+	return func(i *build.Injector) (any, error) {
+		return NewProvider(WithDifficulty(difficulty)), nil
+	}
+}
+
+type Config struct {
+	Difficulty int
+}
 
 func WithDifficulty(difficulty int) ProviderOption {
 	return func(s *Provider) {
@@ -52,6 +64,7 @@ func (p *Provider) Expiry() time.Duration {
 }
 
 func (p *Provider) Challenge(subject string, difficulty int) (string, error) {
+	subject = base64.RawURLEncoding.EncodeToString([]byte(subject))
 	nonce := make([]byte, 16)
 	if _, err := rand.Read(nonce); nil != err {
 		return "", err
@@ -102,6 +115,9 @@ func (p *Provider) Verify(response string) (bool, error) {
 	}
 
 	if err = r.Verify(); err != nil {
+		if errors.Is(err, ErrInvalidSolution) {
+			return false, nil
+		}
 		return false, err
 	}
 	return true, nil

@@ -9,7 +9,8 @@ import (
 	"time"
 
 	"github.com/spf13/viper"
-	"wise-tcp/internal/pow/hashcash"
+
+	"wise-tcp/internal/pow/providers/hashcash"
 	"wise-tcp/pkg/config"
 	"wise-tcp/pkg/log"
 	"wise-tcp/pkg/zap"
@@ -161,7 +162,6 @@ func mustLoadConfig() *Config {
 }
 
 func initLogger(cfg AppConfig) {
-	log.Info("t", false, []int{1, 2})
 	logger, err := zap.New(
 		zap.WithName(cfg.Name),
 		zap.WithProd(cfg.Prod),

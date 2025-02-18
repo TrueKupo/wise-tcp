@@ -1,10 +1,11 @@
 package hashcash_test
 
 import (
+	"encoding/base64"
 	"testing"
 	"time"
 
-	"wise-tcp/internal/pow/hashcash"
+	"wise-tcp/internal/pow/providers/hashcash"
 )
 
 func TestProvider_Challenge(t *testing.T) {
@@ -23,7 +24,7 @@ func TestProvider_Challenge(t *testing.T) {
 		t.Errorf("Invalid challenge format: %v", err)
 	}
 
-	if ch.Subject != subject {
+	if ch.Subject != base64.RawURLEncoding.EncodeToString([]byte(subject)) {
 		t.Errorf("Expected subject %s, got %s", subject, ch.Subject)
 	}
 

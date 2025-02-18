@@ -7,13 +7,23 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"net"
 	"net/http"
 	"sync"
 	"time"
 
+	"wise-tcp/pkg/core/build"
 	"wise-tcp/pkg/log"
 )
+
+func Builder() build.Builder {
+	return func(i *build.Injector) (any, error) {
+		q, err := NewQuote()
+		if err != nil {
+			return nil, err
+		}
+		return q, nil
+	}
+}
 
 type Quote struct {
 	quoteDB []string
@@ -22,6 +32,7 @@ type Quote struct {
 }
 
 const quotesBatchURL = "https://zenquotes.io/api/quotes"
+
 const randomQuoteURL = "https://zenquotes.io/api/random"
 
 func NewQuote() (*Quote, error) {
@@ -29,19 +40,22 @@ func NewQuote() (*Quote, error) {
 		client: &http.Client{Timeout: 5 * time.Second},
 	}
 
-	q.loadZenQuotes(context.Background())
-
 	return q, nil
 }
 
-func (q *Quote) Handle(ctx context.Context, conn net.Conn) error {
+func (q *Quote) Init(ctx context.Context) error {
+	q.loadZenQuotes(ctx)
+	return nil
+}
+
+func (q *Quote) Handle(ctx context.Context, rw io.ReadWriter) error {
 	quote, err := q.getQuote(ctx)
 	if err != nil {
 		log.Error(err)
 		return fmt.Errorf("failed to fetch quote: %w", err)
 	}
 
-	_, err = conn.Write([]byte(quote + "\n"))
+	_, err = rw.Write([]byte(quote + "\n"))
 	if err != nil {
 		return fmt.Errorf("failed to write to connection: %w", err)
 	}

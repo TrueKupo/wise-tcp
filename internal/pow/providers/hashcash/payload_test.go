@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"wise-tcp/internal/pow/hashcash"
+	"wise-tcp/internal/pow/providers/hashcash"
 )
 
 func TestPayloadStringSerialization(t *testing.T) {

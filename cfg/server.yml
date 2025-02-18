@@ -4,8 +4,11 @@ app:
 
 server:
   port: 9001
-  timeout: 15s
-  maxConn: 2
+  timeout: 10s
+  throttle:
+    max: 2
+    policy: block
+    timeout: 4s
 
-guard:
-  powDifficulty: 20
+pow:
+  diff: 20

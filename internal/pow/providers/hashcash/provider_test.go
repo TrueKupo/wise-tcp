@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"wise-tcp/internal/pow/hashcash"
+	"wise-tcp/internal/pow/providers/hashcash"
 )
 
 func TestProviderInitialization(t *testing.T) {

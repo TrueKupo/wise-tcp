@@ -4,82 +4,74 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"sync"
 	"time"
 
-	"wise-tcp/internal/graceful"
+	"wise-tcp/internal/auth"
+	"wise-tcp/pkg/core/build"
 	"wise-tcp/pkg/log"
 )
 
 type Config struct {
-	Port    int           `yaml:"port" env:"PORT"`
-	Timeout time.Duration `yaml:"timeout"`
-	MaxConn int           `yaml:"maxConn" env:"MAX_CONN"`
+	Port     int            `mapstructure:"port" env:"PORT"`
+	Timeout  time.Duration  `mapstructure:"timeout"`
+	Throttle ThrottleConfig `mapstructure:"throttle" env:"MAX_CONN"`
 }
 
-type Server interface {
-	Start(ctx context.Context) error
-	graceful.Service
-}
-
-type Guard interface {
-	Verify(ctx context.Context, conn net.Conn) error
+func (c Config) Name() string {
+	return "tcp-server"
 }
 
 type RequestHandler interface {
-	Handle(ctx context.Context, conn net.Conn) error
+	Handle(ctx context.Context, rw io.ReadWriter) error
 }
 
 type TCPServer struct {
-	addr       string
-	listener   net.Listener
-	cfg        Config
-	guard      Guard
-	handler    RequestHandler
-	activeConn int
-	connLock   sync.Mutex
-	wg         sync.WaitGroup
+	addr     string
+	listener net.Listener
+	cfg      Config
+	handler  *connHandler
+	wg       sync.WaitGroup
 }
 
 type Option func(*TCPServer)
 
-func WithConfig(cfg Config) Option {
-	return func(s *TCPServer) {
-		s.cfg = cfg
-	}
-}
-
-func WithGuard(g Guard) Option {
-	return func(s *TCPServer) {
-		s.guard = g
-	}
-}
-
-func WithHandler(h RequestHandler) Option {
-	return func(s *TCPServer) {
-		s.handler = h
-	}
-}
-
+// todo: merge configurations
 var defaultConfig = Config{
 	Port:    8080,
 	Timeout: 5 * time.Second,
-	MaxConn: 1000,
+	Throttle: ThrottleConfig{
+		MaxConn: 1000,
+		Policy:  "reject",
+		Timeout: 5 * time.Second,
+	},
 }
 
-func NewServer(opts ...Option) (*TCPServer, error) {
-	s := &TCPServer{
-		cfg: defaultConfig,
+func Builder(cfg Config) build.Builder {
+	return func(i *build.Injector) (any, error) {
+
+		h, err := build.Extract[RequestHandler](i, "server.handler")
+		if err != nil {
+			return nil, err
+		}
+
+		a, err := build.Extract[auth.RequestAuthorizer](i, "server.auth")
+		if err != nil {
+			log.Error(err)
+		}
+
+		return &TCPServer{
+			cfg:  cfg,
+			addr: fmt.Sprintf(":%d", cfg.Port),
+			handler: &connHandler{
+				throttle:   NewThrottle(cfg.Throttle),
+				auth:       a,
+				reqHandler: h,
+			},
+		}, nil
 	}
-
-	for _, opt := range opts {
-		opt(s)
-	}
-
-	s.addr = fmt.Sprintf(":%d", s.cfg.Port)
-
-	return s, nil
 }
 
 func (s *TCPServer) Start(ctx context.Context) error {
@@ -96,10 +88,16 @@ func (s *TCPServer) Start(ctx context.Context) error {
 	}
 	log.Infof("TCP server listening on %s", s.addr)
 
-	return s.acceptConnections(ctx)
+	go func() {
+		if err := s.acceptLoop(ctx); err != nil {
+			log.Error("Error occurred in accept loop:", err)
+		}
+	}()
+
+	return nil
 }
 
-func (s *TCPServer) acceptConnections(ctx context.Context) error {
+func (s *TCPServer) acceptLoop(ctx context.Context) error {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
@@ -109,6 +107,7 @@ func (s *TCPServer) acceptConnections(ctx context.Context) error {
 				return nil
 			default:
 				if errors.Is(err, net.ErrClosed) {
+					// listener closed, ignore
 					return nil
 				}
 				log.Error("Failed to accept connection: %v", err)
@@ -116,65 +115,13 @@ func (s *TCPServer) acceptConnections(ctx context.Context) error {
 			continue
 		}
 
-		if !s.incrementConnCount(conn) {
-			continue
-		}
-
 		s.wg.Add(1)
 		go func() {
 			defer s.wg.Done()
-			s.handleConnection(ctx, conn)
+			cctx, cancel := context.WithDeadline(ctx, time.Now().Add(s.cfg.Timeout))
+			defer cancel()
+			s.handler.Handle(cctx, conn)
 		}()
-	}
-}
-
-func (s *TCPServer) incrementConnCount(conn net.Conn) bool {
-	s.connLock.Lock()
-	defer s.connLock.Unlock()
-
-	if s.activeConn >= s.cfg.MaxConn {
-		_, _ = conn.Write([]byte("Service currently unavailable, retry later"))
-		_ = conn.Close()
-		log.Warn("Connection rejected: max connections limit reached")
-		return false
-	}
-
-	s.activeConn++
-	return true
-}
-
-func (s *TCPServer) handleConnection(ctx context.Context, conn net.Conn) {
-	defer func() {
-		s.connLock.Lock()
-		s.activeConn--
-		s.connLock.Unlock()
-
-		_ = conn.Close()
-	}()
-
-	if s.cfg.Timeout > 0 {
-		if err := conn.SetDeadline(time.Now().Add(s.cfg.Timeout)); err != nil {
-			log.Errorf("Failed to set connection deadline: %v", err)
-			return
-		}
-	}
-
-	if s.guard != nil {
-		if err := s.guard.Verify(ctx, conn); err != nil {
-			log.Warnf("Connection verification failed: %v", err)
-			return
-		}
-	}
-
-	log.Debugf("Connection verified successfully (addr: %s)...", conn.RemoteAddr())
-
-	if err := s.handler.Handle(ctx, conn); err != nil {
-		var ne net.Error
-		if errors.As(err, &ne) && ne.Timeout() {
-			log.Warn("Connection timed out during processing")
-		} else {
-			log.Errorf("Handler failed to process request: %v", err)
-		}
 	}
 }
 

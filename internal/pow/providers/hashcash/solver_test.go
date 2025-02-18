@@ -3,7 +3,7 @@ package hashcash_test
 import (
 	"testing"
 	"time"
-	"wise-tcp/internal/pow/hashcash"
+	"wise-tcp/internal/pow/providers/hashcash"
 )
 
 func TestSolver_Solve_ValidChallenge(t *testing.T) {
@@ -87,5 +87,26 @@ func TestSolver_Solve_NoSolution(t *testing.T) {
 	_, err := solver.Solve(impossibleChallengeStr)
 	if err == nil {
 		t.Fatal("expected error for impossible challenge, but got nil")
+	}
+}
+
+func TestSolver_SubjectWithColons(t *testing.T) {
+	solver := hashcash.NewSolver()
+
+	expiry := time.Now().Add(1 * time.Minute).UTC().Truncate(time.Second)
+	challenge := &hashcash.Challenge{
+		Payload: hashcash.Payload{
+			Version:    1,
+			Difficulty: 10,
+			ExpiresAt:  expiry,
+			Subject:    ":::",
+			Nonce:      "test_nonce",
+			Alg:        "SHA256",
+		},
+	}
+
+	_, err := solver.Solve(challenge.String())
+	if err == nil {
+		t.Fatal("expected error when having colons in subject, but got nil")
 	}
 }
