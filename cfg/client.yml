@@ -1,4 +1,4 @@
-logger:
+app:
   name: wise-client
   prod: true
 

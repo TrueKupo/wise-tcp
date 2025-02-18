@@ -41,7 +41,6 @@ func NewManager(opts ...Option) Manager {
 	m := &manager{
 		services: make([]Service, 0),
 		timeout:  defaultTimeout,
-		log:      log.Default(),
 	}
 
 	for _, opt := range opts {

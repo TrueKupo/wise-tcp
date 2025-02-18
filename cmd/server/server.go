@@ -14,62 +14,62 @@ import (
 	"wise-tcp/internal/pow/hashcash"
 	"wise-tcp/internal/server"
 	"wise-tcp/pkg/config"
-	"wise-tcp/pkg/factory"
 	"wise-tcp/pkg/log"
-	"wise-tcp/pkg/log/zap"
+	"wise-tcp/pkg/zap"
 )
 
 type Config struct {
-	Logger log.Config      `yaml:"logger"`
+	App    AppConfig       `yaml:"app"`
 	Server server.Config   `yaml:"server"`
 	Guard  pow.GuardConfig `yaml:"guard"`
+}
+
+type AppConfig struct {
+	Name string `yaml:"name"`
+	Prod bool   `yaml:"isProd"`
 }
 
 func main() {
 	cfg := mustLoadConfig()
 
-	logger := initLogger(cfg.Logger)
-	logger.Info("Server application starting...")
+	log.Info("Server application starting...")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	serviceFactory := factory.New(
-		factory.WithLogger(logger),
-	)
+	initLogger(cfg.App)
 
-	guard, err := initServerGuard(serviceFactory, cfg.Guard)
+	guard, err := initServerGuard(cfg.Guard)
 	if err != nil {
-		logger.Fatal("Failed to initialize server guard: %v", err)
+		log.Fatalf("Failed to initialize server guard: %v", err)
 	}
 
-	qh, err := handler.NewQuote(serviceFactory)
+	qh, err := handler.NewQuote()
 	if err != nil {
-		logger.Fatal("Failed to initialize quote handler: %v", err)
+		log.Fatalf("Failed to initialize quote handler: %v", err)
 	}
 
 	srv, err := server.NewServer(
-		serviceFactory,
 		server.WithConfig(cfg.Server),
 		server.WithGuard(guard),
 		server.WithHandler(qh),
 	)
 	if err != nil {
-		logger.Fatal("Failed to initialize tcp server: %v", err)
+		log.Fatalf("Failed to initialize tcp server: %v", err)
 	}
 
 	go func() {
 		if err = srv.Start(ctx); err != nil {
-			logger.Fatal("Server start failed: %v", err)
+			log.Fatalf("Server start failed: %v", err)
 		}
 	}()
 
 	gracefulManager := initGraceful(srv)
 	if err = gracefulManager.Start(ctx); err != nil {
-		logger.Error("Shutdown failed: %v", err)
+		log.Errorf("Shutdown failed: %v", err)
 	}
 
-	logger.Info("Application stopped")
+	log.Infof("Application stopped")
 }
 
 func mustLoadConfig() *Config {
@@ -77,11 +77,20 @@ func mustLoadConfig() *Config {
 		config.WithEnvMapper[Config](applyConfigMapping))
 }
 
-func initLogger(cfg log.Config) log.Logger {
-	return zap.Init(cfg)
+func initLogger(cfg AppConfig) {
+	logger, err := zap.New(
+		zap.WithName(cfg.Name),
+		zap.WithProd(cfg.Prod),
+	)
+	if err != nil {
+		log.Errorf("Failed to initialize zap logger: %v", err)
+		return
+	}
+
+	log.SetLogger(logger)
 }
 
-func initServerGuard(fc factory.Factory, cfg pow.GuardConfig) (server.Guard, error) {
+func initServerGuard(cfg pow.GuardConfig) (server.Guard, error) {
 	var difficulty int
 	if cfg.PowDifficulty == 0 {
 		difficulty = 20
@@ -90,7 +99,7 @@ func initServerGuard(fc factory.Factory, cfg pow.GuardConfig) (server.Guard, err
 	} else {
 		difficulty = cfg.PowDifficulty
 	}
-	provider := hashcash.NewProvider(fc, hashcash.WithDifficulty(difficulty))
+	provider := hashcash.NewProvider(hashcash.WithDifficulty(difficulty))
 
 	return pow.NewGuard(provider), nil
 }

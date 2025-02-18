@@ -6,28 +6,10 @@ import (
 	"time"
 
 	"wise-tcp/internal/pow/hashcash"
-	"wise-tcp/pkg/log"
 )
 
-type mockLogger struct{}
-
-func (m *mockLogger) Info(_ string, _ ...interface{})  {}
-func (m *mockLogger) Warn(_ string, _ ...interface{})  {}
-func (m *mockLogger) Debug(_ string, _ ...interface{}) {}
-func (m *mockLogger) Error(_ string, _ ...any)         {}
-func (m *mockLogger) Fatal(_ string, _ ...interface{}) {}
-func (m *mockLogger) Flush() error                     { return nil }
-
-type mockFactory struct{}
-
-func (m *mockFactory) Logger() log.Logger {
-	return &mockLogger{}
-}
-
 func TestProviderInitialization(t *testing.T) {
-	provider := hashcash.NewProvider(&mockFactory{},
-		hashcash.WithDifficulty(25),
-	)
+	provider := hashcash.NewProvider(hashcash.WithDifficulty(25))
 
 	if provider == nil {
 		t.Fatal("Provider should not be nil")
@@ -43,7 +25,7 @@ func TestProviderInitialization(t *testing.T) {
 }
 
 func TestChallengeGeneration(t *testing.T) {
-	provider := hashcash.NewProvider(&mockFactory{})
+	provider := hashcash.NewProvider()
 
 	challenge, err := provider.Challenge("test_subject", 20)
 	if err != nil {
@@ -66,7 +48,7 @@ func TestChallengeGeneration(t *testing.T) {
 }
 
 func TestChallengeVerification(t *testing.T) {
-	provider := hashcash.NewProvider(&mockFactory{})
+	provider := hashcash.NewProvider()
 
 	challenge, err := provider.Challenge("test_subject", 20)
 	if err != nil {
@@ -97,7 +79,7 @@ func TestChallengeVerification(t *testing.T) {
 }
 
 func TestReplayProtection(t *testing.T) {
-	provider := hashcash.NewProvider(&mockFactory{})
+	provider := hashcash.NewProvider()
 
 	challenge, err := provider.Challenge("test_subject", 20)
 	if err != nil {

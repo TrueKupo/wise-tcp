@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	"wise-tcp/pkg/factory"
 	"wise-tcp/pkg/log"
 )
 
@@ -29,9 +28,8 @@ func WithDifficulty(difficulty int) ProviderOption {
 	}
 }
 
-func NewProvider(factory factory.Factory, opts ...ProviderOption) *Provider {
+func NewProvider(opts ...ProviderOption) *Provider {
 	p := &Provider{
-		log:        factory.Logger(),
 		difficulty: defaultDifficulty,
 		expiry:     defaultExpiry,
 	}

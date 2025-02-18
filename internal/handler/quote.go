@@ -12,7 +12,6 @@ import (
 	"sync"
 	"time"
 
-	"wise-tcp/pkg/factory"
 	"wise-tcp/pkg/log"
 )
 
@@ -26,9 +25,8 @@ type Quote struct {
 const quotesBatchURL = "https://zenquotes.io/api/quotes"
 const randomQuoteURL = "https://zenquotes.io/api/random"
 
-func NewQuote(fc factory.Factory) (*Quote, error) {
+func NewQuote() (*Quote, error) {
 	q := &Quote{
-		log:    fc.Logger(),
 		client: &http.Client{Timeout: 5 * time.Second},
 	}
 
@@ -40,7 +38,7 @@ func NewQuote(fc factory.Factory) (*Quote, error) {
 func (q *Quote) Handle(ctx context.Context, conn net.Conn) error {
 	quote, err := q.getQuote(ctx)
 	if err != nil {
-		q.log.Error("Failed to fetch quote:", err)
+		log.Error(err)
 		return fmt.Errorf("failed to fetch quote: %w", err)
 	}
 

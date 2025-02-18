@@ -6,12 +6,12 @@ import (
 	"testing"
 )
 
-func setupTestLogger() (*defaultLogger, *bytes.Buffer) {
+func setupTestLogger() (stdLogger, *bytes.Buffer) {
 	var output bytes.Buffer
 	std.SetOutput(&output)
 	std.SetFlags(0)
 
-	logger := Default().(*defaultLogger)
+	logger := stdLogger{}
 
 	return logger, &output
 }
@@ -22,7 +22,32 @@ func assertLogOutput(t *testing.T, got, want string) {
 	}
 }
 
-func TestDefaultLogger_LogLevels(t *testing.T) {
+func TestStdLogger_LogLevels(t *testing.T) {
+	logger, output := setupTestLogger()
+
+	tests := []struct {
+		name     string
+		logFunc  func(...interface{})
+		args     []interface{}
+		expected string
+	}{
+		{"Info", logger.Info, []interface{}{"info", 1}, "[INFO] info 1\n"},
+		{"Debug", logger.Debug, []interface{}{"debug", 2}, "[DEBUG] debug 2\n"},
+		{"Warn", logger.Warn, []interface{}{"warn", 3}, "[WARN] warn 3\n"},
+		{"Error", logger.Error, []interface{}{"error", 4}, "[ERROR] error 4\n"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.logFunc(tt.args...)
+			got := output.String()
+			assertLogOutput(t, got, tt.expected)
+			output.Reset()
+		})
+	}
+}
+
+func TestStdLogger_LogLevels_Format(t *testing.T) {
 	logger, output := setupTestLogger()
 
 	tests := []struct {
@@ -31,10 +56,10 @@ func TestDefaultLogger_LogLevels(t *testing.T) {
 		message  string
 		expected string
 	}{
-		{"Info", logger.Info, "info message", "[INFO] info message\n"},
-		{"Debug", logger.Debug, "debug message", "[DEBUG] debug message\n"},
-		{"Warn", logger.Warn, "warn message", "[WARN] warn message\n"},
-		{"Error", logger.Error, "error message", "[ERROR] error message\n"},
+		{"Info", logger.Infof, "info message", "[INFO] info message\n"},
+		{"Debug", logger.Debugf, "debug message", "[DEBUG] debug message\n"},
+		{"Warn", logger.Warnf, "warn message", "[WARN] warn message\n"},
+		{"Error", logger.Errorf, "error message", "[ERROR] error message\n"},
 	}
 
 	for _, tt := range tests {
@@ -106,10 +131,10 @@ func TestDefaultLogger_EmptyMessage(t *testing.T) {
 func TestDefaultLogger_FormatMismatch(t *testing.T) {
 	logger, output := setupTestLogger()
 
-	logger.Debug("debug with args: %d", 42)
+	logger.Debugf("debug with args: %d", 42)
 	assertLogOutput(t, output.String(), "[DEBUG] debug with args: 42\n")
 	output.Reset()
 
-	logger.Warn("warn with args: %d")
+	logger.Warnf("warn with args: %d")
 	assertLogOutput(t, output.String(), "[WARN] warn with args: %!d(MISSING)\n")
 }

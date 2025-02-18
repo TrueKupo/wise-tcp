@@ -5,13 +5,10 @@ import (
 	"time"
 
 	"wise-tcp/internal/pow/hashcash"
-	fc "wise-tcp/pkg/factory"
-	"wise-tcp/pkg/log"
 )
 
 func TestProvider_Challenge(t *testing.T) {
-	factory := fc.New(fc.WithLogger(log.Default()))
-	provider := hashcash.NewProvider(factory)
+	provider := hashcash.NewProvider()
 
 	subject := "test_subject"
 	difficulty := 20
@@ -40,8 +37,7 @@ func TestProvider_Challenge(t *testing.T) {
 }
 
 func TestProvider_Verify(t *testing.T) {
-	factory := fc.New(fc.WithLogger(log.Default()))
-	provider := hashcash.NewProvider(factory)
+	provider := hashcash.NewProvider()
 
 	subject := "test_subject"
 	difficulty := 20
@@ -76,8 +72,7 @@ func TestProvider_Verify(t *testing.T) {
 }
 
 func TestProvider_Verify_FakeSolution(t *testing.T) {
-	factory := fc.New(fc.WithLogger(log.Default()))
-	provider := hashcash.NewProvider(factory)
+	provider := hashcash.NewProvider()
 
 	subject := "test_subject"
 	difficulty := 20
@@ -172,8 +167,7 @@ func TestSolver_Solve(t *testing.T) {
 }
 
 func TestCache_ReplayProtection(t *testing.T) {
-	factory := fc.New(fc.WithLogger(log.Default()))
-	provider := hashcash.NewProvider(factory)
+	provider := hashcash.NewProvider()
 
 	subject := "test_subject"
 	difficulty := 10

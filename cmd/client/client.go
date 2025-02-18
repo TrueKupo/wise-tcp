@@ -12,12 +12,17 @@ import (
 	"wise-tcp/internal/pow/hashcash"
 	"wise-tcp/pkg/config"
 	"wise-tcp/pkg/log"
-	"wise-tcp/pkg/log/zap"
+	"wise-tcp/pkg/zap"
 )
 
 type Config struct {
-	Logger log.Config   `yaml:"logger"`
+	App    AppConfig    `yaml:"app"`
 	Client ClientConfig `yaml:"client"`
+}
+
+type AppConfig struct {
+	Name string `yaml:"name"`
+	Prod bool   `yaml:"isProd"`
 }
 
 type ClientConfig struct {
@@ -28,21 +33,21 @@ type ClientConfig struct {
 func main() {
 	cfg := mustLoadConfig()
 
-	logger := initLogger(cfg.Logger)
-	logger.Debug("Client application starting...")
+	initLogger(cfg.App)
+	log.Debug("Client application starting...")
 
-	quote, solution, err := getQuote(cfg, logger, "")
+	quote, solution, err := getQuote(cfg, "")
 	if err != nil {
-		logger.Error("Failed to get quote: %v", err)
+		log.Errorf("Failed to get quote: %v", err)
 		return
 	}
 
 	fmt.Println(quote)
 
 	if cfg.Client.TryReplay {
-		quote, _, err = getQuote(cfg, logger, solution)
+		quote, _, err = getQuote(cfg, solution)
 		if err != nil {
-			logger.Error("Failed to get quote with replayed solution: %v", err)
+			log.Error("Failed to get quote with replayed solution: %v", err)
 			return
 		}
 
@@ -50,14 +55,14 @@ func main() {
 	}
 }
 
-func getQuote(cfg *Config, logger log.Logger, replay string) (string, string, error) {
-	conn, err := connect(cfg, logger)
+func getQuote(cfg *Config, replay string) (string, string, error) {
+	conn, err := connect(cfg)
 	if err != nil {
 		return "", "", fmt.Errorf("failed to connect to server: %v", err)
 	}
 	defer func() {
 		if closeErr := conn.Close(); closeErr != nil {
-			logger.Error("Failed to close connection: %v", closeErr)
+			log.Errorf("Failed to close connection: %v", closeErr)
 		}
 	}()
 
@@ -66,7 +71,7 @@ func getQuote(cfg *Config, logger log.Logger, replay string) (string, string, er
 		return "", "", fmt.Errorf("failed to receive challenge: %v", err)
 	}
 
-	logger.Debug("Received challenge: %s", challenge)
+	log.Debugf("Received challenge: %s", challenge)
 
 	var solution string
 	if replay == "" {
@@ -75,10 +80,10 @@ func getQuote(cfg *Config, logger log.Logger, replay string) (string, string, er
 		if err != nil {
 			return "", "", fmt.Errorf("failed to solve challenge: %v", err)
 		}
-		logger.Info("Solved solution: %s", solution)
+		log.Infof("Solved solution: %s", solution)
 	} else {
 		solution = replay
-		logger.Debug("Replaying solution: %s", solution)
+		log.Debugf("Replaying solution: %s", solution)
 	}
 
 	response := []byte("X-Response: " + solution)
@@ -91,25 +96,25 @@ func getQuote(cfg *Config, logger log.Logger, replay string) (string, string, er
 		return "", "", fmt.Errorf("failed to receive quote message: %v", err)
 	}
 
-	logger.Debug("Received random quote: %s", quote)
+	log.Debug("Received random quote: %s", quote)
 
 	return quote, solution, nil
 }
 
-func connect(cfg *Config, logger log.Logger) (net.Conn, error) {
+func connect(cfg *Config) (net.Conn, error) {
 	serverAddr := cfg.Client.ServerAddr
 	if len(os.Args) > 1 {
 		serverAddr = os.Args[1]
 	}
 
-	logger.Debug("Connecting to server at %s...", serverAddr)
+	log.Debugf("Connecting to server at %s...", serverAddr)
 
 	conn, err := net.Dial("tcp", serverAddr)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to server: %v", err)
 	}
 
-	logger.Debug("Connected to server: %s", conn.RemoteAddr())
+	log.Debugf("Connected to server: %s", conn.RemoteAddr())
 	return conn, nil
 }
 
@@ -155,8 +160,18 @@ func mustLoadConfig() *Config {
 		config.WithEnvMapper[Config](applyConfigMapping))
 }
 
-func initLogger(cfg log.Config) log.Logger {
-	return zap.Init(cfg)
+func initLogger(cfg AppConfig) {
+	log.Info("t", false, []int{1, 2})
+	logger, err := zap.New(
+		zap.WithName(cfg.Name),
+		zap.WithProd(cfg.Prod),
+	)
+	if err != nil {
+		log.Errorf("Failed to initialize zap logger: %v", err)
+		return
+	}
+
+	log.SetLogger(logger)
 }
 
 func applyConfigMapping(v *viper.Viper) error {

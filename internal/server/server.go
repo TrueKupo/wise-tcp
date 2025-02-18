@@ -7,8 +7,8 @@ import (
 	"net"
 	"sync"
 	"time"
+
 	"wise-tcp/internal/graceful"
-	"wise-tcp/pkg/factory"
 	"wise-tcp/pkg/log"
 )
 
@@ -34,7 +34,6 @@ type RequestHandler interface {
 type TCPServer struct {
 	addr       string
 	listener   net.Listener
-	log        log.Logger
 	cfg        Config
 	guard      Guard
 	handler    RequestHandler
@@ -69,9 +68,8 @@ var defaultConfig = Config{
 	MaxConn: 1000,
 }
 
-func NewServer(factory factory.Factory, opts ...Option) (*TCPServer, error) {
+func NewServer(opts ...Option) (*TCPServer, error) {
 	s := &TCPServer{
-		log: factory.Logger(),
 		cfg: defaultConfig,
 	}
 
@@ -89,14 +87,14 @@ func (s *TCPServer) Start(ctx context.Context) error {
 		return fmt.Errorf("server is already running")
 	}
 
-	s.log.Debug("Initializing server with config: %#v", s.cfg)
+	log.Debugf("Initializing server with config: %#v", s.cfg)
 
 	var err error
 	s.listener, err = net.Listen("tcp", s.addr)
 	if err != nil {
 		return fmt.Errorf("failed to start server: %w", err)
 	}
-	s.log.Info("TCP server listening on %s", s.addr)
+	log.Infof("TCP server listening on %s", s.addr)
 
 	return s.acceptConnections(ctx)
 }
@@ -107,13 +105,13 @@ func (s *TCPServer) acceptConnections(ctx context.Context) error {
 		if err != nil {
 			select {
 			case <-ctx.Done():
-				s.log.Info("Server shutting down due to context cancellation")
+				log.Info("Server shutting down due to context cancellation")
 				return nil
 			default:
 				if errors.Is(err, net.ErrClosed) {
 					return nil
 				}
-				s.log.Error("Failed to accept connection: %v", err)
+				log.Error("Failed to accept connection: %v", err)
 			}
 			continue
 		}
@@ -137,7 +135,7 @@ func (s *TCPServer) incrementConnCount(conn net.Conn) bool {
 	if s.activeConn >= s.cfg.MaxConn {
 		_, _ = conn.Write([]byte("Service currently unavailable, retry later"))
 		_ = conn.Close()
-		s.log.Warn("Connection rejected: max connections limit reached")
+		log.Warn("Connection rejected: max connections limit reached")
 		return false
 	}
 
@@ -156,32 +154,32 @@ func (s *TCPServer) handleConnection(ctx context.Context, conn net.Conn) {
 
 	if s.cfg.Timeout > 0 {
 		if err := conn.SetDeadline(time.Now().Add(s.cfg.Timeout)); err != nil {
-			s.log.Error("Failed to set connection deadline: %v", err)
+			log.Errorf("Failed to set connection deadline: %v", err)
 			return
 		}
 	}
 
 	if s.guard != nil {
 		if err := s.guard.Verify(ctx, conn); err != nil {
-			s.log.Warn("Connection verification failed: %v", err)
+			log.Warnf("Connection verification failed: %v", err)
 			return
 		}
 	}
 
-	s.log.Debug("Connection verified successfully (addr: %s)...", conn.RemoteAddr())
+	log.Debugf("Connection verified successfully (addr: %s)...", conn.RemoteAddr())
 
 	if err := s.handler.Handle(ctx, conn); err != nil {
 		var ne net.Error
 		if errors.As(err, &ne) && ne.Timeout() {
-			s.log.Warn("Connection timed out during processing")
+			log.Warn("Connection timed out during processing")
 		} else {
-			s.log.Error("Handler failed to process request: %v", err)
+			log.Errorf("Handler failed to process request: %v", err)
 		}
 	}
 }
 
 func (s *TCPServer) Stop(ctx context.Context) error {
-	s.log.Info("Shutting down TCP server...")
+	log.Info("Shutting down TCP server...")
 
 	if s.listener != nil {
 		if err := s.listener.Close(); err != nil && !errors.Is(err, net.ErrClosed) {
@@ -197,9 +195,9 @@ func (s *TCPServer) Stop(ctx context.Context) error {
 
 	select {
 	case <-done:
-		s.log.Info("All connections closed")
+		log.Info("All connections closed")
 	case <-ctx.Done():
-		s.log.Warn("Shutdown timeout exceeded, forcing shutdown")
+		log.Warn("Shutdown timeout exceeded, forcing shutdown")
 	}
 
 	return nil

@@ -1,0 +1,105 @@
+package zap
+
+import (
+	"go.uber.org/zap"
+)
+
+type Config struct {
+	Prod bool
+	Name string
+}
+
+type Logger struct {
+	logger *zap.SugaredLogger
+	isProd bool
+	name   string
+}
+
+type Option func(l *Logger)
+
+func WithProd(v bool) Option {
+	return func(l *Logger) {
+		l.isProd = v
+	}
+}
+
+func WithName(name string) Option {
+	return func(l *Logger) {
+		l.name = name
+	}
+}
+
+func New(opts ...Option) (*Logger, error) {
+	var zapLogger *zap.Logger
+	var err error
+
+	l := &Logger{}
+
+	for _, opt := range opts {
+		opt(l)
+	}
+
+	if l.isProd {
+		zapLogger, err = zap.NewProduction()
+	} else {
+		zapLogger, err = zap.NewDevelopment()
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	options := []zap.Option{
+		zap.AddCallerSkip(1),
+		zap.AddCaller(),
+	}
+	if l.name != "" {
+		options = append(options, zap.Fields(zap.String("name", l.name)))
+	}
+
+	zapLogger = zapLogger.WithOptions(options...)
+
+	l.logger = zapLogger.Sugar()
+
+	return l, nil
+}
+
+func (z *Logger) Info(args ...interface{}) {
+	z.logger.Info(args)
+}
+
+func (z *Logger) Warn(args ...interface{}) {
+	z.logger.Warn(args)
+}
+
+func (z *Logger) Error(args ...interface{}) {
+	z.logger.Error(args)
+}
+
+func (z *Logger) Debug(args ...interface{}) {
+	z.logger.Debug(args)
+}
+
+func (z *Logger) Fatal(args ...interface{}) {
+	z.logger.Fatal(args)
+}
+
+func (z *Logger) Infof(format string, args ...interface{}) {
+	z.logger.Infof(format, args...)
+}
+
+func (l *Logger) Warnf(format string, args ...interface{}) {
+	l.logger.Warnf(format, args...)
+}
+
+func (l *Logger) Errorf(format string, args ...interface{}) {
+	l.logger.Errorf(format, args...)
+}
+
+func (l *Logger) Debugf(format string, args ...interface{}) {
+	l.logger.Debugf(format, args...)
+}
+
+func (l *Logger) Fatalf(format string, args ...interface{}) {
+	l.logger.Fatalf(format, args...)
+}
