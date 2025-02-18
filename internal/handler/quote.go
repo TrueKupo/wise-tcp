@@ -16,7 +16,6 @@ import (
 )
 
 type Quote struct {
-	log     log.Logger
 	quoteDB []string
 	mu      sync.RWMutex
 	client  *http.Client
@@ -61,33 +60,33 @@ func (q *Quote) loadZenQuotes(ctx context.Context) {
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, quotesBatchURL, nil)
 	if err != nil {
-		q.log.Error("Failed to create request:", err)
+		log.Error("Failed to create request:", err)
 		q.quoteDB = q.fallbackQuotes()
 		return
 	}
 
 	resp, err := q.client.Do(req)
 	if err != nil {
-		q.log.Error("Failed to fetch quotes:", err)
+		log.Error("Failed to fetch quotes:", err)
 		q.quoteDB = q.fallbackQuotes()
 		return
 	}
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			q.log.Error("Failed to close response body:", err)
+			log.Error("Failed to close response body:", err)
 		}
 	}(resp.Body)
 
 	if resp.StatusCode != http.StatusOK {
-		q.log.Error("Non-OK HTTP status:", resp.StatusCode)
+		log.Error("Non-OK HTTP status:", resp.StatusCode)
 		q.quoteDB = q.fallbackQuotes()
 		return
 	}
 
 	var quotes []zenQuote
 	if err = json.NewDecoder(resp.Body).Decode(&quotes); err != nil {
-		q.log.Error("Failed to decode quotes:", err)
+		log.Error("Failed to decode quotes:", err)
 		q.quoteDB = q.fallbackQuotes()
 		return
 	}
@@ -97,7 +96,7 @@ func (q *Quote) loadZenQuotes(ctx context.Context) {
 	}
 
 	if len(q.quoteDB) == 0 {
-		q.log.Warn("No quotes loaded from API, falling back to defaults")
+		log.Warn("No quotes loaded from API, falling back to defaults")
 		q.quoteDB = q.fallbackQuotes()
 	}
 }
@@ -143,7 +142,7 @@ func (q *Quote) randomZenOnline(ctx context.Context) (string, error) {
 	defer func(Body io.ReadCloser) {
 		err := Body.Close()
 		if err != nil {
-			q.log.Error("Failed to close response body:", err)
+			log.Error("Failed to close response body:", err)
 		}
 	}(resp.Body)
 
