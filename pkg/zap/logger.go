@@ -50,7 +50,7 @@ func New(opts ...Option) (*Logger, error) {
 	}
 
 	options := []zap.Option{
-		zap.AddCallerSkip(1),
+		zap.AddCallerSkip(2),
 		zap.AddCaller(),
 	}
 	if l.name != "" {
