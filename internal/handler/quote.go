@@ -16,7 +16,7 @@ import (
 )
 
 func Builder() build.Builder {
-	return func(i *build.Injector) (any, error) {
+	return func(_ *build.Injector) (any, error) {
 		q, err := NewQuote()
 		if err != nil {
 			return nil, err

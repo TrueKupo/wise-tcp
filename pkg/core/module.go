@@ -11,7 +11,6 @@ import (
 
 type Module struct {
 	name  string
-	cfg   interface{}
 	mods  map[string]*Module
 	units []*Unit
 	state *stateLock

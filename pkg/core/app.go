@@ -76,9 +76,7 @@ func (a *App) Go(ctx context.Context) error {
 		}
 	case <-time.After(startTimeout):
 		if a.main.State() != StateRunning {
-			errMsg := fmt.Sprintf("main module failed to start within %v: current state: %s", startTimeout, a.main.State())
-			log.Error(errMsg)
-			return fmt.Errorf(errMsg)
+			return fmt.Errorf("main module failed to start within %v", startTimeout)
 		}
 	}
 

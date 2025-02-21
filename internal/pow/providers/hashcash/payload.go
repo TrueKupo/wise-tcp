@@ -1,6 +1,7 @@
 package hashcash
 
 import (
+	"encoding/base64"
 	"fmt"
 	"strconv"
 	"strings"
@@ -74,7 +75,11 @@ func (p *Payload) FromString(parts []string) error {
 }
 
 func (p *Payload) Fingerprint() (string, error) {
-	return getFingerprint(p.Alg, p.Subject, p.Nonce, p.ExpiresAt, p.Difficulty)
+	f, err := getFingerprint(p.Alg, p.Subject, p.Nonce, p.ExpiresAt, p.Difficulty)
+	if err != nil {
+		return "", err
+	}
+	return base64.StdEncoding.EncodeToString([]byte(f)), nil
 }
 
 func getFingerprint(alg, subject, nonce string, at time.Time, difficulty int) (string, error) {

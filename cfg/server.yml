@@ -12,3 +12,5 @@ server:
 
 pow:
   diff: 20
+  async: true
+  redis: "localhost:6379"

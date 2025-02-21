@@ -20,10 +20,9 @@ func (h *connHandler) Handle(ctx context.Context, conn net.Conn) {
 		if errors.Is(err, ErrConnRejected) || errors.Is(err, ErrConnDropped) {
 			log.Warnf("Connection throttled: %v", err)
 			return
-		} else {
-			log.Errorf("Acquire error: %v", err)
-			return
 		}
+		log.Errorf("Acquire error: %v", err)
+		return
 	}
 	defer h.throttle.Release()
 	defer func(conn net.Conn) {

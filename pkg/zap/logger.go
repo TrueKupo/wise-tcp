@@ -88,18 +88,18 @@ func (z *Logger) Infof(format string, args ...interface{}) {
 	z.logger.Infof(format, args...)
 }
 
-func (l *Logger) Warnf(format string, args ...interface{}) {
-	l.logger.Warnf(format, args...)
+func (z *Logger) Warnf(format string, args ...interface{}) {
+	z.logger.Warnf(format, args...)
 }
 
-func (l *Logger) Errorf(format string, args ...interface{}) {
-	l.logger.Errorf(format, args...)
+func (z *Logger) Errorf(format string, args ...interface{}) {
+	z.logger.Errorf(format, args...)
 }
 
-func (l *Logger) Debugf(format string, args ...interface{}) {
-	l.logger.Debugf(format, args...)
+func (z *Logger) Debugf(format string, args ...interface{}) {
+	z.logger.Debugf(format, args...)
 }
 
-func (l *Logger) Fatalf(format string, args ...interface{}) {
-	l.logger.Fatalf(format, args...)
+func (z *Logger) Fatalf(format string, args ...interface{}) {
+	z.logger.Fatalf(format, args...)
 }

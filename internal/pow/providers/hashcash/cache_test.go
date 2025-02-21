@@ -1,6 +1,7 @@
 package hashcash_test
 
 import (
+	"context"
 	"testing"
 	"time"
 
@@ -8,12 +9,12 @@ import (
 )
 
 func TestCache_AddAndRemove(t *testing.T) {
-	cache := hashcash.NewCache(10 * time.Second)
-	defer cache.Stop()
+	cache := hashcash.NewMemoryCache(10 * time.Second)
+	defer cache.Stop(context.Background())
 
 	testFingerprint := "test123"
 
-	cache.Add(testFingerprint, 1*time.Hour)
+	cache.Add(testFingerprint, "", 1*time.Hour)
 
 	err := cache.Remove(testFingerprint)
 	if err != nil {
@@ -27,19 +28,19 @@ func TestCache_AddAndRemove(t *testing.T) {
 }
 
 func TestCache_Expiration(t *testing.T) {
-	cache := hashcash.NewCache(10 * time.Second)
-	defer cache.Stop()
+	cache := hashcash.NewMemoryCache(10 * time.Second)
+	defer cache.Stop(context.Background())
 
 	testFingerprint := "expiring123"
 
-	cache.Add(testFingerprint, 100*time.Millisecond)
+	cache.Add(testFingerprint, "", 100*time.Millisecond)
 
 	err := cache.Remove(testFingerprint)
 	if err != nil {
 		t.Fatalf("expected fingerprint to exist before expiration, but got: %v", err)
 	}
 
-	cache.Add(testFingerprint, 100*time.Millisecond)
+	cache.Add(testFingerprint, "", 100*time.Millisecond)
 
 	time.Sleep(150 * time.Millisecond)
 
@@ -50,12 +51,12 @@ func TestCache_Expiration(t *testing.T) {
 }
 
 func TestCache_Cleanup(t *testing.T) {
-	cache := hashcash.NewCache(50 * time.Millisecond)
-	defer cache.Stop()
+	cache := hashcash.NewMemoryCache(50 * time.Millisecond)
+	defer cache.Stop(context.Background())
 
 	testFingerprint := "cleanup123"
 
-	cache.Add(testFingerprint, 20*time.Millisecond)
+	cache.Add(testFingerprint, "", 20*time.Millisecond)
 
 	time.Sleep(100 * time.Millisecond)
 
@@ -66,11 +67,11 @@ func TestCache_Cleanup(t *testing.T) {
 }
 
 func TestCache_Stop(t *testing.T) {
-	cache := hashcash.NewCache(10 * time.Millisecond)
-	cache.Stop()
+	cache := hashcash.NewMemoryCache(10 * time.Millisecond)
+	cache.Stop(context.Background())
 
 	fingerprint := "stopTest"
-	cache.Add(fingerprint, 10*time.Millisecond)
+	cache.Add(fingerprint, "", 10*time.Millisecond)
 	err := cache.Remove(fingerprint)
 	if err != nil {
 		t.Fatalf("expected to remove fingerprint successfully after stopping the cleanup worker, but got: %v", err)
@@ -78,12 +79,12 @@ func TestCache_Stop(t *testing.T) {
 }
 
 func TestCache_Concurrency(t *testing.T) {
-	cache := hashcash.NewCache(10 * time.Second)
-	defer cache.Stop()
+	cache := hashcash.NewMemoryCache(10 * time.Second)
+	defer cache.Stop(context.Background())
 
 	testFingerprint := "concurrent123"
 
-	cache.Add(testFingerprint, 1*time.Second)
+	cache.Add(testFingerprint, "", 1*time.Second)
 
 	done := make(chan error, 2)
 

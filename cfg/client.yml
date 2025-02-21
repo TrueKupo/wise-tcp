@@ -4,4 +4,6 @@ app:
 
 client:
   serverAddr: "localhost:9001"
+  beaconAddr: "localhost:9002"
+  async: true
   tryReplay: false

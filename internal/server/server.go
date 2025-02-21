@@ -38,20 +38,8 @@ type TCPServer struct {
 
 type Option func(*TCPServer)
 
-// todo: merge configurations
-var defaultConfig = Config{
-	Port:    8080,
-	Timeout: 5 * time.Second,
-	Throttle: ThrottleConfig{
-		MaxConn: 1000,
-		Policy:  "reject",
-		Timeout: 5 * time.Second,
-	},
-}
-
 func Builder(cfg Config) build.Builder {
 	return func(i *build.Injector) (any, error) {
-
 		h, err := build.Extract[RequestHandler](i, "server.handler")
 		if err != nil {
 			return nil, err
@@ -88,27 +76,23 @@ func (s *TCPServer) Start(ctx context.Context) error {
 	}
 	log.Infof("TCP server listening on %s", s.addr)
 
-	go func() {
-		if err := s.acceptLoop(ctx); err != nil {
-			log.Error("Error occurred in accept loop:", err)
-		}
-	}()
+	go s.acceptLoop(ctx)
 
 	return nil
 }
 
-func (s *TCPServer) acceptLoop(ctx context.Context) error {
+func (s *TCPServer) acceptLoop(ctx context.Context) {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
 			select {
 			case <-ctx.Done():
 				log.Info("Server shutting down due to context cancellation")
-				return nil
+				return
 			default:
 				if errors.Is(err, net.ErrClosed) {
 					// listener closed, ignore
-					return nil
+					return
 				}
 				log.Error("Failed to accept connection: %v", err)
 			}

@@ -1,19 +1,18 @@
 package hashcash
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
 
-	"wise-tcp/pkg/core/build"
-	"wise-tcp/pkg/log"
+	"wise-tcp/pkg/core"
 )
 
 type Provider struct {
-	log        log.Logger
-	cache      *Cache
+	cache      ChallengeCache
 	difficulty int
 	expiry     time.Duration
 }
@@ -24,19 +23,26 @@ const defaultDifficulty = 20
 const defaultExpiry = 1 * time.Minute
 const defaultAlg = "sha256"
 
-func Builder(difficulty int) build.Builder {
-	return func(i *build.Injector) (any, error) {
-		return NewProvider(WithDifficulty(difficulty)), nil
-	}
-}
-
 type Config struct {
 	Difficulty int
+}
+
+type ChallengeCache interface {
+	Add(fingerprint string, challenge string, expiration time.Duration) error
+	Remove(fingerprint string) error
+	core.Starter
+	core.Stopper
 }
 
 func WithDifficulty(difficulty int) ProviderOption {
 	return func(s *Provider) {
 		s.difficulty = difficulty
+	}
+}
+
+func WithCache(cache ChallengeCache) ProviderOption {
+	return func(provider *Provider) {
+		provider.cache = cache
 	}
 }
 
@@ -50,7 +56,9 @@ func NewProvider(opts ...ProviderOption) *Provider {
 		opt(p)
 	}
 
-	p.cache = NewCache(10 * time.Second)
+	if p.cache == nil {
+		p.cache = NewMemoryCache(10 * time.Second)
+	}
 
 	return p
 }
@@ -61,6 +69,14 @@ func (p *Provider) Difficulty() int {
 
 func (p *Provider) Expiry() time.Duration {
 	return p.expiry
+}
+
+func (p *Provider) Start(ctx context.Context) error {
+	return p.cache.Start(ctx)
+}
+
+func (p *Provider) Stop(ctx context.Context) error {
+	return p.cache.Stop(ctx)
 }
 
 func (p *Provider) Challenge(subject string, difficulty int) (string, error) {
@@ -95,9 +111,44 @@ func (p *Provider) Challenge(subject string, difficulty int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	p.cache.Add(fingerprint, p.expiry)
+
+	err = p.cache.Add(fingerprint, c.String(), p.expiry)
+	if err != nil {
+		return "", err
+	}
 
 	return c.String(), nil
+}
+
+func (p *Provider) RawChallenge(subject string, difficulty int) (*Challenge, error) {
+	subject = base64.RawURLEncoding.EncodeToString([]byte(subject))
+	nonce := make([]byte, 16)
+	if _, err := rand.Read(nonce); nil != err {
+		return nil, err
+	}
+
+	if subject == "" {
+		return nil, fmt.Errorf("subject must not be empty")
+	}
+
+	if difficulty == 0 {
+		difficulty = p.difficulty
+	} else if difficulty < 0 {
+		return nil, fmt.Errorf("difficulty must be positive or 0, got %d", difficulty)
+	}
+
+	c := &Challenge{
+		Payload: Payload{
+			Version:    1,
+			Difficulty: difficulty,
+			ExpiresAt:  time.Now().Add(p.expiry),
+			Subject:    subject,
+			Nonce:      base64.RawURLEncoding.EncodeToString(nonce),
+			Alg:        defaultAlg,
+		},
+	}
+
+	return c, nil
 }
 
 func (p *Provider) Verify(response string) (bool, error) {

@@ -16,5 +16,7 @@ type ProviderFactory interface {
 type ProviderBuilder func() (Provider, error)
 
 type Config struct {
-	Difficulty int `mapstructure:"diff" envconfig:"POW_DIFFICULTY"`
+	Difficulty int    `mapstructure:"diff" envconfig:"POW_DIFFICULTY"`
+	AsyncMode  bool   `mapstructure:"async" envconfig:"POW_ASYNC"`
+	RedisAddr  string `mapstructure:"redis" envconfig:"REDIS_ADDR"`
 }

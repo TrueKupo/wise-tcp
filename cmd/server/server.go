@@ -8,7 +8,6 @@ import (
 
 	"wise-tcp/internal/handler"
 	"wise-tcp/internal/pow"
-	"wise-tcp/internal/pow/providers/hashcash"
 	"wise-tcp/internal/server"
 	"wise-tcp/pkg/config"
 	"wise-tcp/pkg/core"
@@ -39,8 +38,7 @@ func main() {
 
 	app := core.NewApp()
 	err := app.BuildUnits(
-		core.UnitBuilder{Builder: hashcash.Builder(cfg.Pow.Difficulty), Name: "auth.provider"},
-		core.UnitBuilder{Builder: pow.AuthBuilder(), Name: "server.auth"},
+		core.UnitBuilder{Builder: pow.AuthBuilder(cfg.Pow), Name: "server.auth"},
 		core.UnitBuilder{Builder: handler.Builder(), Name: "server.handler"},
 		core.UnitBuilder{Builder: server.Builder(cfg.Server), Name: "server"},
 	)
@@ -82,6 +80,12 @@ func applyConfigMapping(v *viper.Viper) error {
 	}
 	if err := v.BindEnv("pow.diff", "POW_DIFFICULTY"); err != nil {
 		return fmt.Errorf("failed to bind POW_DIFFICULTY: %w", err)
+	}
+	if err := v.BindEnv("pow.async", "POW_ASYNC"); err != nil {
+		return fmt.Errorf("failed to bind POW_ASYNC: %w", err)
+	}
+	if err := v.BindEnv("pow.redis", "REDIS_ADDR"); err != nil {
+		return fmt.Errorf("failed to bind REDIS_ADDR: %w", err)
 	}
 
 	return nil

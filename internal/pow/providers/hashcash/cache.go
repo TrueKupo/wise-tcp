@@ -1,20 +1,21 @@
 package hashcash
 
 import (
+	"context"
 	"errors"
 	"sync"
 	"time"
 )
 
-type Cache struct {
+type MemoryCache struct {
 	fingerprints map[string]time.Time
 	mu           sync.RWMutex
 	ticker       *time.Ticker
 	stop         chan struct{}
 }
 
-func NewCache(cleanupInterval time.Duration) *Cache {
-	c := &Cache{
+func NewMemoryCache(cleanupInterval time.Duration) *MemoryCache {
+	c := &MemoryCache{
 		fingerprints: make(map[string]time.Time),
 		ticker:       time.NewTicker(cleanupInterval),
 		stop:         make(chan struct{}),
@@ -25,16 +26,27 @@ func NewCache(cleanupInterval time.Duration) *Cache {
 	return c
 }
 
-func (c *Cache) Add(fingerprint string, expiry time.Duration) {
+func (c *MemoryCache) Start(_ context.Context) error {
+	go c.startCleanupWorker()
+	return nil
+}
+
+func (c *MemoryCache) Stop(_ context.Context) error {
+	c.stop <- struct{}{}
+	return nil
+}
+
+func (c *MemoryCache) Add(fingerprint string, _ string, expiry time.Duration) error {
 	expirationTime := time.Now().Add(expiry)
 
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	c.fingerprints[fingerprint] = expirationTime
+	return nil
 }
 
-func (c *Cache) Remove(fingerprint string) error {
+func (c *MemoryCache) Remove(fingerprint string) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -52,11 +64,11 @@ func (c *Cache) Remove(fingerprint string) error {
 	return nil
 }
 
-func (c *Cache) startCleanupWorker() {
+func (c *MemoryCache) startCleanupWorker() {
 	for {
 		select {
 		case <-c.ticker.C:
-			c.Cleanup()
+			c.cleanup()
 		case <-c.stop:
 			c.ticker.Stop()
 			return
@@ -64,7 +76,7 @@ func (c *Cache) startCleanupWorker() {
 	}
 }
 
-func (c *Cache) Cleanup() {
+func (c *MemoryCache) cleanup() {
 	now := time.Now()
 
 	c.mu.Lock()
@@ -75,8 +87,4 @@ func (c *Cache) Cleanup() {
 			delete(c.fingerprints, fingerprint)
 		}
 	}
-}
-
-func (c *Cache) Stop() {
-	close(c.stop)
 }
